@@ -1,0 +1,31 @@
+# Raw slide data never goes into Git (too big, and may contain patient data)
+data/
+
+# Common slide formats, in case one is saved elsewhere by mistake
+*.svs
+*.ndpi
+*.mrxs
+*.tif
+*.tiff
+*.scn
+*.dcm
+
+# QuPath project caches
+*.qpproj.backup
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Editors and OS
+.vscode/*.log
+.DS_Store
+
+# .NET build output
+bin/
+obj/
+.vs/
+
+.vscode/*
