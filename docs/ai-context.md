@@ -32,7 +32,7 @@ Intended use: research and decision support only; the pathologist always decides
 
 ## Data
 - v1 detection: PatchCamelyon (patches) and CAMELYON16 (lymph node WSIs), breast cancer.
-- v2 grading: <your decision from L0.2>.
+- v2 grading: TCGA-BRCA is fine for grading, let me know if any other public dataset available for grading training
 - Later: partner lab data, swapped in by configuration without code changes.
 
 ## Stack
