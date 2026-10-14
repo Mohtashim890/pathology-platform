@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/SlideQcCompleted.schema.json",
+  "title": "SlideQcCompleted",
+  "description": "Published by the QC worker. Consumed by the tiling worker (if pass or warn) and the dashboard.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["slideId", "qcResultId", "qcVersion", "verdict", "reasons"],
+  "properties": {
+    "slideId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "qcResultId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "qcVersion": { "type": "string", "minLength": 1 },
+    "verdict": { "$ref": "common.schema.json#/$defs/QcVerdict" },
+    "reasons": { "type": "array", "items": { "type": "string" } },
+    "tissueFraction": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+  },
+  "unevaluatedProperties": false
+}

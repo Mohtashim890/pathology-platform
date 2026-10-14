@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/common.schema.json",
+  "title": "Shared definitions for platform events",
+  "$defs": {
+    "Envelope": {
+      "description": "Fields every event carries.",
+      "type": "object",
+      "required": ["eventId", "occurredAt", "schemaVersion", "correlationId"],
+      "properties": {
+        "eventId": { "$ref": "#/$defs/Uuid", "description": "Unique per event; consumers use it to ignore duplicates." },
+        "occurredAt": { "type": "string", "format": "date-time" },
+        "schemaVersion": { "type": "integer", "minimum": 1, "description": "Bumped on breaking changes to this event." },
+        "correlationId": { "$ref": "#/$defs/Uuid", "description": "Ties all events of one slide (or report) together; usually the slideId." }
+      }
+    },
+    "Uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "Sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ObjectKey": { "type": "string", "minLength": 1, "description": "Key in object storage, e.g. raw/{slideId}." },
+    "SlideStatus": { "enum": ["uploading", "ingested", "qc_passed", "qc_failed", "tiled", "processed", "rejected", "replaced"] },
+    "Stain": { "enum": ["he", "ihc_er", "ihc_pr", "ihc_her2", "ihc_ki67", "other"] },
+    "QcVerdict": { "enum": ["pass", "warn", "fail"] },
+    "ModelTask": { "enum": ["tumor_detection", "grading", "mitosis_detection"] },
+    "ReportSource": { "enum": ["tcga", "partner", "manual"] }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/ReportReceived.schema.json",
+  "title": "ReportReceived",
+  "description": "Published by the report API. Consumed by the NLP service.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["reportId", "caseId", "source", "rawTextKey"],
+  "properties": {
+    "reportId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "caseId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "source": { "$ref": "common.schema.json#/$defs/ReportSource" },
+    "rawTextKey": { "$ref": "common.schema.json#/$defs/ObjectKey" }
+  },
+  "unevaluatedProperties": false
+}

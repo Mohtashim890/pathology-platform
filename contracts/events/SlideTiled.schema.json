@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/SlideTiled.schema.json",
+  "title": "SlideTiled",
+  "description": "Published by the tiling worker. Consumed by the inference worker and the embedding worker.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["slideId", "pyramidKey", "tileSize", "tissueTileCount"],
+  "properties": {
+    "slideId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "pyramidKey": { "$ref": "common.schema.json#/$defs/ObjectKey", "description": "Prefix of the Deep Zoom pyramid, tiles/{slideId}/" },
+    "tileSize": { "type": "integer", "minimum": 1 },
+    "tissueTileCount": { "type": "integer", "minimum": 0 }
+  },
+  "unevaluatedProperties": false
+}

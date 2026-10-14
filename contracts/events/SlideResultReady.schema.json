@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/SlideResultReady.schema.json",
+  "title": "SlideResultReady",
+  "description": "Published by the aggregator. Consumed by the API (SignalR push to viewers), the triage service and the indexer.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["runId", "slideId", "modelVersionId", "label", "score", "uncertainty", "conformalSet"],
+  "properties": {
+    "runId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "slideId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "modelVersionId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "label": { "type": "string", "minLength": 1 },
+    "score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "uncertainty": { "type": "number", "minimum": 0 },
+    "conformalSet": { "type": "array", "items": { "type": "string" } },
+    "heatmapKey": { "type": ["string", "null"] }
+  },
+  "unevaluatedProperties": false
+}

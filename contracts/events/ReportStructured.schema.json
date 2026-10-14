@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/ReportStructured.schema.json",
+  "title": "ReportStructured",
+  "description": "Published by the NLP service. Consumed by the FHIR mapper and the label store. Fields that were not found are null, never guessed.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["reportId", "caseId", "extractorVersion", "fields"],
+  "properties": {
+    "reportId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "caseId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "extractorVersion": { "type": "string", "minLength": 1 },
+    "fields": {
+      "type": "object",
+      "required": ["diagnosis", "nottinghamGrade", "er", "pr", "her2", "ki67Percent", "lymphNodesPositive", "lymphNodesExamined"],
+      "properties": {
+        "diagnosis": { "type": ["string", "null"] },
+        "nottinghamGrade": { "enum": [1, 2, 3, null] },
+        "er": { "enum": ["positive", "negative", null] },
+        "pr": { "enum": ["positive", "negative", null] },
+        "her2": { "enum": ["0", "1+", "2+", "3+", "positive", "negative", "equivocal", null] },
+        "ki67Percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "lymphNodesPositive": { "type": ["integer", "null"], "minimum": 0 },
+        "lymphNodesExamined": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "unevaluatedProperties": false
+}

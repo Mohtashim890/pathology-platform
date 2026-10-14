@@ -1,0 +1,14 @@
+{
+  "eventId": "01928f4e-8b21-7000-8000-000000000002",
+  "occurredAt": "2026-10-14T09:01:40Z",
+  "schemaVersion": 1,
+  "correlationId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "slideId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "qcResultId": "01928f4e-8b20-7d4f-a03b-4c6d7e8f9a02",
+  "qcVersion": "qc-0.1.0",
+  "verdict": "warn",
+  "reasons": [
+    "pen_marks"
+  ],
+  "tissueFraction": 0.18
+}

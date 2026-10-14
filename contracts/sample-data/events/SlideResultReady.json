@@ -1,0 +1,16 @@
+{
+  "eventId": "01928f4e-a000-7000-8000-000000000005",
+  "occurredAt": "2026-10-14T09:12:20Z",
+  "schemaVersion": 1,
+  "correlationId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "runId": "01928f4e-9c30-7e50-b14c-5d7e8f9a0b03",
+  "slideId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "modelVersionId": "01928e10-0000-7000-8000-00000000aa01",
+  "label": "tumor",
+  "score": 0.94,
+  "uncertainty": 0.07,
+  "conformalSet": [
+    "tumor"
+  ],
+  "heatmapKey": "overlays/01928f4e-9c30-7e50-b14c-5d7e8f9a0b03/tumor.png"
+}

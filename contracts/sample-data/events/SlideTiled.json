@@ -1,0 +1,10 @@
+{
+  "eventId": "01928f4e-8f00-7000-8000-000000000003",
+  "occurredAt": "2026-10-14T09:04:12Z",
+  "schemaVersion": 1,
+  "correlationId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "slideId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "pyramidKey": "tiles/01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01/",
+  "tileSize": 256,
+  "tissueTileCount": 41873
+}
