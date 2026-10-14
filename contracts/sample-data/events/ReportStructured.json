@@ -1,0 +1,19 @@
+{
+  "eventId": "01928f50-2000-7000-8000-000000000007",
+  "occurredAt": "2026-10-14T10:00:09Z",
+  "schemaVersion": 1,
+  "correlationId": "01928f50-1111-7222-8333-444455556666",
+  "reportId": "01928f50-1111-7222-8333-444455556666",
+  "caseId": "01928f4e-6f00-7b11-8c2d-1a2b3c4d5e01",
+  "extractorVersion": "rules-0.1.0",
+  "fields": {
+    "diagnosis": "Invasive carcinoma of no special type",
+    "nottinghamGrade": 2,
+    "er": "positive",
+    "pr": "positive",
+    "her2": "1+",
+    "ki67Percent": 20,
+    "lymphNodesPositive": 1,
+    "lymphNodesExamined": 3
+  }
+}

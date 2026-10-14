@@ -1,0 +1,940 @@
+openapi: 3.1.0
+info:
+  title: Breast Pathology AI Platform API
+  version: 0.1.0
+  description: |
+    Contract v1 for the Platform API. Areas marked "stub" are detailed in later lessons.
+    Conventions: IDs are UUIDv7; coordinates are level-0 pixels; errors use
+    RFC 9457 problem details (application/problem+json).
+servers:
+  - url: http://localhost:5080
+    description: Local development
+tags:
+  - name: Cases
+  - name: Slides
+  - name: Tiles
+  - name: QC
+  - name: Results
+  - name: Models
+  - name: Reports
+    description: Stub, detailed in Module 8
+  - name: Search
+    description: Stub, detailed in Module 9
+  - name: Triage
+    description: Stub, detailed in Module 11
+  - name: Admin
+    description: Stub, detailed in Module 10
+  - name: Health
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness and dependency health
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: One or more dependencies are unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+
+  /cases:
+    post:
+      tags: [Cases]
+      summary: Register a case
+      operationId: createCase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCaseRequest"
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /cases/{caseId}:
+    get:
+      tags: [Cases]
+      summary: Get a case
+      operationId: getCase
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Case"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /cases/{caseId}/slides:
+    get:
+      tags: [Cases]
+      summary: List the slides of a case
+      operationId: listCaseSlides
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SlideStatus"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Slide"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /slides:
+    post:
+      tags: [Slides]
+      summary: Upload a slide (streamed) and attach it to a case
+      description: |
+        The file is streamed to object storage without being buffered in memory (NFR-02).
+        On success the slide has status `ingested` and a SlideIngested event is published.
+      operationId: uploadSlide
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [caseId, stain, file]
+              properties:
+                caseId:
+                  type: string
+                  format: uuid
+                stain:
+                  $ref: "#/components/schemas/Stain"
+                file:
+                  type: string
+                  contentMediaType: application/octet-stream
+      responses:
+        "201":
+          description: Slide stored and ingested
+          headers:
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Slide"
+        "409":
+          description: A slide with the same checksum already exists (US-13)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/DuplicateSlideProblem"
+        "415":
+          description: Unsupported slide format (US-10)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "422":
+          description: The file could not be read as a slide (US-10)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /slides/{slideId}:
+    get:
+      tags: [Slides]
+      summary: Get a slide's metadata and status
+      operationId: getSlide
+      parameters:
+        - $ref: "#/components/parameters/SlideId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Slide"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /slides/{slideId}/dzi:
+    get:
+      tags: [Tiles]
+      summary: Deep Zoom descriptor for the viewer
+      operationId: getDzi
+      parameters:
+        - $ref: "#/components/parameters/SlideId"
+      responses:
+        "200":
+          description: Deep Zoom Image (DZI) XML
+          content:
+            application/xml:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Tiles are not generated yet; the viewer shows "processing" (US-01)
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /slides/{slideId}/tiles/{level}/{col}_{row}.jpeg:
+    get:
+      tags: [Tiles]
+      summary: One Deep Zoom tile
+      description: Cached aggressively; tiles never change once generated (NFR-01).
+      operationId: getTile
+      parameters:
+        - $ref: "#/components/parameters/SlideId"
+        - name: level
+          in: path
+          required: true
+          description: Deep Zoom level (0 = smallest image, highest = full resolution)
+          schema: { type: integer, minimum: 0 }
+        - name: col
+          in: path
+          required: true
+          schema: { type: integer, minimum: 0 }
+        - name: row
+          in: path
+          required: true
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: JPEG tile
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              example: public, max-age=31536000, immutable
+            ETag:
+              schema: { type: string }
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                contentMediaType: image/jpeg
+        "304":
+          description: Not modified
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /slides/{slideId}/qc:
+    get:
+      tags: [QC]
+      summary: Latest quality-control result for a slide
+      operationId: getSlideQc
+      parameters:
+        - $ref: "#/components/parameters/SlideId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QcResult"
+        "404":
+          description: Slide not found, or QC not finished yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /slides/{slideId}/inference:
+    post:
+      tags: [Results]
+      summary: Request inference with a model version (idempotent, US-23)
+      description: |
+        Returns 202 with a new run, or 200 with the existing run if this slide was
+        already processed by this model version.
+      operationId: requestInference
+      parameters:
+        - $ref: "#/components/parameters/SlideId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modelVersionId]
+              properties:
+                modelVersionId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: A run for this slide and model version already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InferenceRun"
+        "202":
+          description: Run queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InferenceRun"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Slide has not passed QC or is not tiled yet
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /slides/{slideId}/results:
+    get:
+      tags: [Results]
+      summary: All AI results for a slide, newest first
+      operationId: listSlideResults
+      parameters:
+        - $ref: "#/components/parameters/SlideId"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SlideResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /results/{runId}/overlay/{layer}:
+    get:
+      tags: [Results]
+      summary: Overlay for the viewer as a compact score grid
+      operationId: getOverlay
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+        - name: layer
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/OverlayLayer"
+      responses:
+        "200":
+          description: Score grid in level-0 coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreGrid"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /results/{runId}/decision:
+    post:
+      tags: [Results]
+      summary: Record the pathologist's decision on a result (US-05)
+      operationId: recordDecision
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+      responses:
+        "201":
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /models:
+    get:
+      tags: [Models]
+      summary: List model versions
+      operationId: listModels
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ModelStatus"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModelVersion"
+    post:
+      tags: [Models]
+      summary: Register an ONNX model with its model card (US-20)
+      operationId: registerModel
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [onnx, modelCard]
+              properties:
+                onnx:
+                  type: string
+                  contentMediaType: application/octet-stream
+                modelCard:
+                  $ref: "#/components/schemas/ModelCard"
+      responses:
+        "201":
+          description: Registered with status `staging`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelVersion"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /models/{modelVersionId}/promote:
+    post:
+      tags: [Models]
+      summary: Promote a staging model to production (US-21)
+      operationId: promoteModel
+      parameters:
+        - name: modelVersionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Promoted; the previous production model is retired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelVersion"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Not better than production on the golden set, or not approved
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+
+  /reports:
+    post:
+      tags: [Reports]
+      summary: Submit a pathology report (stub)
+      operationId: submitReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caseId, text, source]
+              properties:
+                caseId: { type: string, format: uuid }
+                text: { type: string, minLength: 1 }
+                source:
+                  type: string
+                  enum: [tcga, partner, manual]
+      responses:
+        "202":
+          description: Accepted; a ReportReceived event is published
+
+  /cases/{caseId}/report/fhir:
+    get:
+      tags: [Reports]
+      summary: The case report as a FHIR R4 Bundle (stub)
+      operationId: getFhirReport
+      parameters:
+        - $ref: "#/components/parameters/CaseId"
+      responses:
+        "200":
+          description: FHIR Bundle
+          content:
+            application/fhir+json:
+              schema:
+                type: object
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /search/region:
+    post:
+      tags: [Search]
+      summary: Find regions similar to a drawn rectangle (stub)
+      operationId: searchRegion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slideId, region]
+              properties:
+                slideId: { type: string, format: uuid }
+                region:
+                  $ref: "#/components/schemas/Region"
+                k: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: Ranked similar regions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchHit"
+
+  /search/text:
+    post:
+      tags: [Search]
+      summary: Find cases by a text query (stub)
+      operationId: searchText
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query: { type: string, minLength: 1 }
+                k: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        "200":
+          description: Ranked hits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchHit"
+
+  /worklist:
+    get:
+      tags: [Triage]
+      summary: Cases ranked by priority (stub)
+      operationId: getWorklist
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [priority, received]
+            default: priority
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /triage/settings:
+    put:
+      tags: [Triage]
+      summary: Update triage thresholds (stub)
+      operationId: updateTriageSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Saved
+
+  /audit:
+    get:
+      tags: [Admin]
+      summary: Search the audit log (stub)
+      operationId: searchAudit
+      parameters:
+        - name: actor
+          in: query
+          schema: { type: string }
+        - name: entity
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: OpenID Connect access token (enforced from L10.1)
+
+  parameters:
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SlideId:
+      name: slideId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    Conflict:
+      description: Conflicts with the current state
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ProblemDetails"
+    ValidationError:
+      description: The request is well-formed but invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/ValidationProblem"
+
+  schemas:
+    # ---- Shared enums: must match schema.sql CHECK constraints and events/common.schema.json
+    SlideStatus:
+      type: string
+      enum: [uploading, ingested, qc_passed, qc_failed, tiled, processed, rejected, replaced]
+    Stain:
+      type: string
+      enum: [he, ihc_er, ihc_pr, ihc_her2, ihc_ki67, other]
+    SpecimenType:
+      type: string
+      enum: [core_biopsy, excision, lymph_node, other]
+    QcVerdict:
+      type: string
+      enum: [pass, warn, fail]
+    ModelTask:
+      type: string
+      enum: [tumor_detection, grading, mitosis_detection]
+    ModelStatus:
+      type: string
+      enum: [staging, production, retired]
+    RunStatus:
+      type: string
+      enum: [queued, running, completed, failed]
+    DecisionValue:
+      type: string
+      enum: [agree, disagree]
+    OverlayLayer:
+      type: string
+      enum: [tumor, uncertainty, tissue, qc]
+
+    # ---- Entities
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [healthy, degraded, unhealthy] }
+        checks:
+          type: object
+          additionalProperties: { type: string }
+
+    CreateCaseRequest:
+      type: object
+      required: [caseKey, site, specimenType, receivedAt]
+      properties:
+        caseKey:
+          type: string
+          pattern: "^[A-Za-z0-9-]{3,40}$"
+          description: Pseudonymous key; never a patient name or hospital number
+        site: { type: string }
+        specimenType: { $ref: "#/components/schemas/SpecimenType" }
+        receivedAt: { type: string, format: date-time }
+
+    Case:
+      type: object
+      required: [id, caseKey, site, specimenType, receivedAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        caseKey: { type: string }
+        site: { type: string }
+        specimenType: { $ref: "#/components/schemas/SpecimenType" }
+        receivedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    Slide:
+      type: object
+      required: [id, caseId, stain, status, checksumSha256, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: string, format: uuid }
+        stain: { $ref: "#/components/schemas/Stain" }
+        format: { type: [string, "null"] }
+        scanner: { type: [string, "null"] }
+        mpp:
+          type: [number, "null"]
+          exclusiveMinimum: 0
+          description: Microns per pixel at level 0; null if the file doesn't say (US-10)
+        width: { type: [integer, "null"], minimum: 1 }
+        height: { type: [integer, "null"], minimum: 1 }
+        fileSizeBytes: { type: [integer, "null"], minimum: 1 }
+        checksumSha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        status: { $ref: "#/components/schemas/SlideStatus" }
+        replacesSlideId: { type: [string, "null"], format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    QcResult:
+      type: object
+      required: [id, slideId, qcVersion, verdict, reasons, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        slideId: { type: string, format: uuid }
+        qcVersion: { type: string }
+        verdict: { $ref: "#/components/schemas/QcVerdict" }
+        reasons:
+          type: array
+          items: { type: string }
+        tissueFraction: { type: [number, "null"], minimum: 0, maximum: 1 }
+        blurScore: { type: [number, "null"] }
+        foldScore: { type: [number, "null"] }
+        penScore: { type: [number, "null"] }
+        tissueMaskUrl: { type: [string, "null"], format: uri }
+        createdAt: { type: string, format: date-time }
+
+    InferenceRun:
+      type: object
+      required: [id, slideId, modelVersionId, pipelineVersion, status, queuedAt]
+      properties:
+        id: { type: string, format: uuid }
+        slideId: { type: string, format: uuid }
+        modelVersionId: { type: string, format: uuid }
+        pipelineVersion: { type: string }
+        status: { $ref: "#/components/schemas/RunStatus" }
+        queuedAt: { type: string, format: date-time }
+        startedAt: { type: [string, "null"], format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }
+        error: { type: [string, "null"] }
+
+    SlideResult:
+      type: object
+      description: One AI result with full lineage (US-22)
+      required: [runId, slideId, label, score, uncertainty, conformalSet, model, pipelineVersion, qcVersion, createdAt]
+      properties:
+        runId: { type: string, format: uuid }
+        slideId: { type: string, format: uuid }
+        label: { type: string, examples: [tumor, normal, grade_2] }
+        score: { type: number, minimum: 0, maximum: 1 }
+        uncertainty: { type: number, minimum: 0 }
+        uncertain:
+          type: boolean
+          description: True when uncertainty is above the configured threshold (US-03)
+        conformalSet:
+          type: array
+          items: { type: string }
+        model:
+          type: object
+          required: [id, name, version]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            version: { type: string }
+        pipelineVersion: { type: string }
+        qcVersion: { type: string }
+        decision:
+          oneOf:
+            - $ref: "#/components/schemas/Decision"
+            - type: "null"
+        createdAt: { type: string, format: date-time }
+
+    ScoreGrid:
+      type: object
+      description: |
+        Compact grid of per-tile values for one overlay layer. Cell (i, j) covers
+        level-0 pixels [originX + j*cellSize, +cellSize) x [originY + i*cellSize, +cellSize).
+        Null means no tissue.
+      required: [layer, originX, originY, cellSize, rows, cols, values]
+      properties:
+        layer: { $ref: "#/components/schemas/OverlayLayer" }
+        originX: { type: integer, minimum: 0 }
+        originY: { type: integer, minimum: 0 }
+        cellSize: { type: integer, minimum: 1 }
+        rows: { type: integer, minimum: 1 }
+        cols: { type: integer, minimum: 1 }
+        values:
+          type: array
+          description: Row-major, length rows * cols
+          items: { type: [number, "null"] }
+
+    DecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { $ref: "#/components/schemas/DecisionValue" }
+        comment: { type: string, maxLength: 2000 }
+      if:
+        properties:
+          decision: { const: disagree }
+      then:
+        required: [comment]
+
+    Decision:
+      type: object
+      required: [id, runId, decidedBy, decision, decidedAt]
+      properties:
+        id: { type: string, format: uuid }
+        runId: { type: string, format: uuid }
+        decidedBy: { type: string }
+        decision: { $ref: "#/components/schemas/DecisionValue" }
+        comment: { type: [string, "null"] }
+        decidedAt: { type: string, format: date-time }
+
+    ModelCard:
+      type: object
+      description: Required fields for registration (US-20)
+      required: [name, version, task, intendedUse, trainingData, metrics, inputMpp, tileSize]
+      properties:
+        name: { type: string }
+        version: { type: string }
+        task: { $ref: "#/components/schemas/ModelTask" }
+        intendedUse: { type: string }
+        limitations: { type: string }
+        trainingData:
+          type: object
+          required: [datasets]
+          properties:
+            datasets:
+              type: array
+              minItems: 1
+              items: { type: string }
+            licences:
+              type: array
+              items: { type: string }
+        metrics:
+          type: object
+          additionalProperties: { type: number }
+        inputMpp: { type: number, exclusiveMinimum: 0 }
+        tileSize: { type: integer, minimum: 1 }
+
+    ModelVersion:
+      type: object
+      required: [id, name, version, task, status, inputMpp, tileSize, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        version: { type: string }
+        task: { $ref: "#/components/schemas/ModelTask" }
+        status: { $ref: "#/components/schemas/ModelStatus" }
+        inputMpp: { type: number }
+        tileSize: { type: integer }
+        metrics:
+          type: object
+          additionalProperties: { type: number }
+        createdAt: { type: string, format: date-time }
+        promotedAt: { type: [string, "null"], format: date-time }
+
+    Region:
+      type: object
+      description: Rectangle in level-0 pixel coordinates
+      required: [x, y, width, height]
+      properties:
+        x: { type: integer, minimum: 0 }
+        y: { type: integer, minimum: 0 }
+        width: { type: integer, minimum: 1 }
+        height: { type: integer, minimum: 1 }
+
+    SearchHit:
+      type: object
+      required: [slideId, caseKey, score]
+      properties:
+        slideId: { type: string, format: uuid }
+        caseKey: { type: string }
+        region: { $ref: "#/components/schemas/Region" }
+        score: { type: number }
+
+    # ---- Errors (RFC 9457, as produced by ASP.NET Core's ProblemDetails)
+    ProblemDetails:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    ValidationProblem:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetails"
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
+
+    DuplicateSlideProblem:
+      allOf:
+        - $ref: "#/components/schemas/ProblemDetails"
+        - type: object
+          required: [existingSlideId, existingCaseKey]
+          properties:
+            existingSlideId: { type: string, format: uuid }
+            existingCaseKey: { type: string }

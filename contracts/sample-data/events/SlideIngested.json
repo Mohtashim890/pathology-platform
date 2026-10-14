@@ -1,0 +1,15 @@
+{
+  "eventId": "01928f4e-7a11-7000-8000-000000000001",
+  "occurredAt": "2026-10-14T09:00:05Z",
+  "schemaVersion": 1,
+  "correlationId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "slideId": "01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "caseId": "01928f4e-6f00-7b11-8c2d-1a2b3c4d5e01",
+  "objectKey": "raw/01928f4e-7a10-7c3e-9f2a-3b5d6e7f8a01",
+  "checksumSha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "stain": "he",
+  "format": "tiff",
+  "mpp": 0.24309,
+  "width": 97792,
+  "height": 221184
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/SlideIngested.schema.json",
+  "title": "SlideIngested",
+  "description": "Published by the ingestion API after a slide is stored. Consumed by the QC worker.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["slideId", "caseId", "objectKey", "checksumSha256", "stain"],
+  "properties": {
+    "slideId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "caseId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "objectKey": { "$ref": "common.schema.json#/$defs/ObjectKey" },
+    "checksumSha256": { "$ref": "common.schema.json#/$defs/Sha256" },
+    "stain": { "$ref": "common.schema.json#/$defs/Stain" },
+    "format": { "type": ["string", "null"] },
+    "mpp": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+    "width": { "type": ["integer", "null"], "minimum": 1 },
+    "height": { "type": ["integer", "null"], "minimum": 1 }
+  },
+  "unevaluatedProperties": false
+}

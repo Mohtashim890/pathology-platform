@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pathology-platform.local/contracts/events/InferenceCompleted.schema.json",
+  "title": "InferenceCompleted",
+  "description": "Published by the inference worker when a run finishes successfully. Consumed by the aggregator and the overlay builder.",
+  "type": "object",
+  "allOf": [{ "$ref": "common.schema.json#/$defs/Envelope" }],
+  "required": ["runId", "slideId", "modelVersionId", "tileScoresKey", "tileCount"],
+  "properties": {
+    "runId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "slideId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "modelVersionId": { "$ref": "common.schema.json#/$defs/Uuid" },
+    "task": { "$ref": "common.schema.json#/$defs/ModelTask" },
+    "tileScoresKey": { "$ref": "common.schema.json#/$defs/ObjectKey", "description": "scores/{runId}.parquet" },
+    "tileCount": { "type": "integer", "minimum": 0 }
+  },
+  "unevaluatedProperties": false
+}
